@@ -27,8 +27,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 #include "Arduino.h"
-#include <Ethernet.h>
-#include "SPI.h"
+#include <ESP8266WiFi.h>
 
 // Length of static data buffers
 #define DATA_BUFFER_LEN 120
@@ -45,7 +44,7 @@ class SocketIOClient {
 		void send(char *data);
 	private:
         void sendHandshake(char hostname[]);
-        EthernetClient client;
+        WiFiClient client;
         DataArrivedDelegate dataArrivedDelegate;
         bool readHandshake();
 		void readLine();

@@ -32,7 +32,9 @@ bool SocketIOClient::connect(char thehostname[], int theport) {
 	if (!client.connect(thehostname, theport)) return false;
 	hostname = thehostname;
 	port = theport;
+  Serial.println("tcp connected");
 	sendHandshake(hostname);
+  Serial.println("sent handshake");
 	return readHandshake();
 }
 
@@ -123,7 +125,7 @@ void SocketIOClient::setDataArrivedDelegate(DataArrivedDelegate newdataArrivedDe
 }
 
 void SocketIOClient::sendHandshake(char hostname[]) {
-	client.println(F("GET /socket.io/1/ HTTP/1.1"));
+	client.println(F("GET /socket.io/1/?transport=polling HTTP/1.1"));
 	client.print(F("Host: "));
 	client.println(hostname);
 	client.println(F("Origin: Arduino\r\n"));
@@ -146,20 +148,28 @@ bool SocketIOClient::readHandshake() {
 
 	if (!waitForInput()) return false;
 
+  Serial.println("reading handshake");
+
 	// check for happy "HTTP/1.1 200" response
 	readLine();
 	if (atoi(&databuffer[9]) != 200) {
 		while (client.available()) readLine();
 		client.stop();
+    Serial.println("Abort 1");
 		return false;
 	}
 	eatHeader();
-	readLine();	// read first line of response
 	readLine();	// read sid : transport : timeout
+
+  Serial.println("Reading sid...");
 
 	char *iptr = databuffer;
 	char *optr = sid;
-	while (*iptr && (*iptr != ':') && (optr < &sid[SID_LEN-2])) *optr++ = *iptr++;
+  while (*iptr && (*iptr != '{'))
+    iptr++;
+  iptr += 8;
+	while (*iptr && (*iptr != '"') && (optr < &sid[SID_LEN-2])) 
+    *optr++ = *iptr++;
 	*optr = 0;
 
 	Serial.print(F("Connected. SID="));
@@ -177,7 +187,7 @@ bool SocketIOClient::readHandshake() {
 	}
 	Serial.println(F("Reconnected."));
 
-	client.print(F("GET /socket.io/1/websocket/"));
+	client.print(F("GET /socket.io/1/?transport=websocket&sid="));
 	client.print(sid);
 	client.println(F(" HTTP/1.1"));
 	client.print(F("Host: "));
@@ -192,6 +202,7 @@ bool SocketIOClient::readHandshake() {
 	if (atoi(&databuffer[9]) != 101) {
 		while (client.available()) readLine();
 		client.stop();
+    Serial.println("Abort 2");
 		return false;
 	}
 	eatHeader();
@@ -201,15 +212,17 @@ bool SocketIOClient::readHandshake() {
 
 void SocketIOClient::readLine() {
 	dataptr = databuffer;
+  Serial.print("<< ");
 	while (client.available() && (dataptr < &databuffer[DATA_BUFFER_LEN-2])) {
 		char c = client.read();
-		//Serial.print(c);
+		Serial.print(c);
 		if (c == 0) Serial.print(F("NULL"));
 		else if (c == 255) Serial.print(F("0x255"));
 		else if (c == '\r') {;}
 		else if (c == '\n') break;
 		else *dataptr++ = c;
 	}
+  Serial.println();
 	*dataptr = 0;
 }
 
