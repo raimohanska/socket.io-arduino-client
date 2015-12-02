@@ -65,13 +65,13 @@ void SocketIOClient::monitor() {
 	*databuffer = 0;
 
 	if (!client.connected()) {
+    Serial.println("reconnecting in monitor()");
 		if (!client.connect(hostname, port)) return;
 	}
 
-	if (!client.available()) return;
-
 	char which;
 	while (client.available()) {
+    Serial.print(".");
     yield();
 		readLine();
 		dataptr = databuffer;
@@ -206,8 +206,8 @@ bool SocketIOClient::readHandshake() {
     Serial.println("Abort 2");
 		return false;
 	}
-  Serial.println("Ok so far");
 	eatHeader();
+  Serial.println("Start monitoring");
 	monitor();		// treat the response as input
 	return true;
 }
