@@ -62,7 +62,6 @@ void SocketIOClient::terminateCommand(void) {
 }
 
 void SocketIOClient::monitor() {
-
 	*databuffer = 0;
 
 	if (!client.connected()) {
@@ -73,8 +72,10 @@ void SocketIOClient::monitor() {
 
 	char which;
 	while (client.available()) {
+    yield();
 		readLine();
 		dataptr = databuffer;
+    Serial.print("Got message "); Serial.println(databuffer[0]);
 		switch (databuffer[0]) {	
 
 		case '1':		// connect: []
@@ -125,7 +126,7 @@ void SocketIOClient::setDataArrivedDelegate(DataArrivedDelegate newdataArrivedDe
 }
 
 void SocketIOClient::sendHandshake(char hostname[]) {
-	client.println(F("GET /socket.io/1/?transport=polling HTTP/1.1"));
+	client.println(F("GET /socket.io/?EIO=3&transport=polling HTTP/1.1"));
 	client.print(F("Host: "));
 	client.println(hostname);
 	client.println(F("Origin: Arduino\r\n"));
@@ -187,14 +188,14 @@ bool SocketIOClient::readHandshake() {
 	}
 	Serial.println(F("Reconnected."));
 
-	client.print(F("GET /socket.io/1/?transport=websocket&sid="));
+	client.print(F("GET /socket.io/?EIO=3&transport=websocket&sid="));
 	client.print(sid);
 	client.println(F(" HTTP/1.1"));
-	client.print(F("Host: "));
-	client.println(hostname);
-	client.println(F("Origin: ArduinoSocketIOClient"));
-	client.println(F("Upgrade: WebSocket"));	// must be camelcase ?!
-	client.println(F("Connection: Upgrade\r\n"));
+	client.println(F("Connection: Upgrade"));
+	client.println(F("Upgrade: websocket"));
+	client.print(F("Host: ")); client.println(hostname);
+  client.println(F("Sec-WebSocket-Version: 13"));
+  client.println(F("Sec-WebSocket-Key: MTMtMTQ0OTA3Njc4MzAzOQ==\r\n"));
 
 	if (!waitForInput()) return false;
 
@@ -205,6 +206,7 @@ bool SocketIOClient::readHandshake() {
     Serial.println("Abort 2");
 		return false;
 	}
+  Serial.println("Ok so far");
 	eatHeader();
 	monitor();		// treat the response as input
 	return true;
